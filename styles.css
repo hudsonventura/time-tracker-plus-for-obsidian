@@ -122,9 +122,48 @@
     width: 0%;
 }
 
-.time-tracker-plus-progress-running {
-    background: linear-gradient(90deg, #ff0000, #ff6666, #ff0000);
+/* Progress bar color states based on percentage */
+.time-tracker-plus-progress-green {
+    background-color: #22c55e;
+}
+
+.time-tracker-plus-progress-green.time-tracker-plus-progress-running {
+    background: linear-gradient(90deg, #16a34a, #4ade80, #16a34a);
     background-size: 200% 100%;
+    animation: progressPulse 3s ease-in-out infinite;
+}
+
+.time-tracker-plus-progress-yellow {
+    background-color: #eab308;
+}
+
+.time-tracker-plus-progress-yellow.time-tracker-plus-progress-running {
+    background: linear-gradient(90deg, #ca8a04, #fde047, #ca8a04);
+    background-size: 200% 100%;
+    animation: progressPulse 3s ease-in-out infinite;
+}
+
+.time-tracker-plus-progress-orange {
+    background-color: #f97316;
+}
+
+.time-tracker-plus-progress-orange.time-tracker-plus-progress-running {
+    background: linear-gradient(90deg, #ea580c, #fb923c, #ea580c);
+    background-size: 200% 100%;
+    animation: progressPulse 3s ease-in-out infinite;
+}
+
+.time-tracker-plus-progress-red {
+    background-color: #ef4444;
+}
+
+.time-tracker-plus-progress-red.time-tracker-plus-progress-running {
+    background: linear-gradient(90deg, #dc2626, #f87171, #dc2626);
+    background-size: 200% 100%;
+    animation: progressPulse 3s ease-in-out infinite;
+}
+
+.time-tracker-plus-progress-running {
     animation: progressPulse 3s ease-in-out infinite;
 }
 
@@ -144,8 +183,23 @@
 }
 
 .time-tracker-plus-progress-text-running {
-    color: #ff0000;
     font-weight: bold;
+}
+
+.time-tracker-plus-progress-text-green {
+    color: #16a34a;
+}
+
+.time-tracker-plus-progress-text-yellow {
+    color: #ca8a04;
+}
+
+.time-tracker-plus-progress-text-orange {
+    color: #ea580c;
+}
+
+.time-tracker-plus-progress-text-red {
+    color: #dc2626;
 }
 
 .time-tracker-plus-running {
