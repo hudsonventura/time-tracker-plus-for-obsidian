@@ -273,7 +273,7 @@ function loadAllTrackers(fileName) {
     return trackers;
   });
 }
-function displayTracker(tracker, element, getFile, getSectionInfo, settings, component) {
+function displayTracker(tracker, element, getFile, getSectionInfo, settings, component, app2) {
   element.addClass("time-tracker-plus-container");
   let running = isRunning(tracker);
   let newSegmentNameBox = { getValue: () => "" };
@@ -294,7 +294,7 @@ function displayTracker(tracker, element, getFile, getSectionInfo, settings, com
       progressText = progressContainer.createEl("div", { cls: "time-tracker-plus-progress-text" });
     }
     for (let entry of orderedEntries(tracker.entries, settings))
-      addEditableTableRow(tracker, entry, table, newSegmentNameBox, running, getFile, getSectionInfo, settings, 0, component, durationCells);
+      addEditableTableRow(tracker, entry, table, newSegmentNameBox, running, getFile, getSectionInfo, settings, 0, component, durationCells, app2);
     let intervalId = window.setInterval(() => {
       if (!element.isConnected) {
         window.clearInterval(intervalId);
@@ -312,6 +312,7 @@ function displayTracker(tracker, element, getFile, getSectionInfo, settings, com
     }
   } else {
     let btn = new import_obsidian3.ButtonComponent(element).setClass("clickable-icon").setIcon("lucide-play-circle").setTooltip("Start").onClick(() => __async(this, null, function* () {
+      yield stopAllOtherRunningTimers(app2, getFile());
       startNewEntry(tracker, newSegmentNameBox.getValue());
       yield saveTracker(tracker, getFile(), getSectionInfo());
     }));
@@ -559,7 +560,7 @@ function createTableSection(entry, settings, indent = 0) {
   }
   return ret;
 }
-function addEditableTableRow(tracker, entry, table, newSegmentNameBox, trackerRunning, getFile, getSectionInfo, settings, indent, component, durationCells) {
+function addEditableTableRow(tracker, entry, table, newSegmentNameBox, trackerRunning, getFile, getSectionInfo, settings, indent, component, durationCells, app2) {
   let entryRunning = hasRunningEntry(entry);
   let row = table.createEl("tr");
   if (entryRunning) {
@@ -591,6 +592,7 @@ function addEditableTableRow(tracker, entry, table, newSegmentNameBox, trackerRu
   entryButtons.addClass("time-tracker-plus-table-buttons");
   if (indent === 0) {
     new import_obsidian3.ButtonComponent(entryButtons).setClass("clickable-icon").setIcon(`lucide-play`).setTooltip("Continue").setDisabled(trackerRunning).onClick(() => __async(this, null, function* () {
+      yield stopAllOtherRunningTimers(app2, getFile());
       startSubEntry(entry, newSegmentNameBox.getValue());
       yield saveTracker(tracker, getFile(), getSectionInfo());
     }));
@@ -663,7 +665,7 @@ function addEditableTableRow(tracker, entry, table, newSegmentNameBox, trackerRu
   }));
   if (entry.subEntries && !entry.collapsed) {
     for (let sub of orderedEntries(entry.subEntries, settings))
-      addEditableTableRow(tracker, sub, table, newSegmentNameBox, trackerRunning, getFile, getSectionInfo, settings, indent + 1, component, durationCells);
+      addEditableTableRow(tracker, sub, table, newSegmentNameBox, trackerRunning, getFile, getSectionInfo, settings, indent + 1, component, durationCells, app2);
   }
 }
 function showConfirm(message) {
@@ -794,6 +796,19 @@ ${updatedTracker}
     return modified;
   });
 }
+function stopAllOtherRunningTimers(app2, currentFileName) {
+  return __async(this, null, function* () {
+    const files = app2.vault.getMarkdownFiles();
+    for (const file of files) {
+      try {
+        const content = yield app2.vault.read(file);
+        yield stopAllRunnersInFile(content, file.path, app2);
+      } catch (e) {
+        console.error("Error stopping timers in file:", file.path, e);
+      }
+    }
+  });
+}
 const TimeTrackerPlusPlugin = class extends import_obsidian4.Plugin {
   constructor() {
     super(...arguments);
@@ -826,7 +841,7 @@ const TimeTrackerPlusPlugin = class extends import_obsidian4.Plugin {
             filePath = file.path;
           }
         }));
-        displayTracker(tracker, e, getFile, () => i.getSectionInfo(e), this.settings, component);
+        displayTracker(tracker, e, getFile, () => i.getSectionInfo(e), this.settings, component, this.app);
         i.addChild(component);
       });
       this.addCommand({
