@@ -12,7 +12,10 @@ export class TimeTrackerPlusSettingsTab extends PluginSettingTab {
 
 	display(): void {
 		this.containerEl.empty();
-		this.containerEl.createEl("h2", { text: "Time Tracker Plus settings" });
+
+		new Setting(this.containerEl)
+			.setName("Time Tracker Plus settings")
+			.setHeading();
 
 		new Setting(this.containerEl)
 			.setName("Timestamp display format")

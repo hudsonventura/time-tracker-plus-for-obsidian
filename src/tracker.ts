@@ -1,4 +1,4 @@
-import { moment, ButtonComponent, TextComponent, MarkdownRenderer, MarkdownRenderChild, TFile, App, MarkdownPostProcessorContext, Component } from "obsidian";
+import { moment, ButtonComponent, TextComponent, MarkdownRenderer, TFile, App, Component } from "obsidian";
 import { TimeTrackerPlusSettings } from "./settings";
 import { ConfirmModal } from "./confirm-modal";
 
@@ -23,16 +23,16 @@ interface SectionInfo {
 // Save and Load Functions
 export async function saveTracker(tracker: Tracker, fileName: string, section: SectionInfo, app: App): Promise<void> {
 	let file = app.vault.getAbstractFileByPath(fileName);
-	if (!file) return;
+	if (!file || !(file instanceof TFile)) return;
 
-	let content = await app.vault.read(file as TFile);
+	let content = await app.vault.read(file);
 	let lines = content.split("\n");
 
 	let prev = lines.filter((_: string, i: number) => i <= section.lineStart).join("\n");
 	let next = lines.filter((_: string, i: number) => i >= section.lineEnd).join("\n");
 
 	content = `${prev}\n${JSON.stringify(tracker)}\n${next}`;
-	await app.vault.modify(file as TFile, content);
+	await app.vault.modify(file, content);
 }
 
 export function loadTracker(json: string): Tracker {
@@ -50,7 +50,9 @@ export function loadTracker(json: string): Tracker {
 
 export async function loadAllTrackers(fileName: string, app: App): Promise<Array<{ section: SectionInfo, tracker: Tracker }>> {
 	let file = app.vault.getAbstractFileByPath(fileName);
-	let content = (await app.vault.cachedRead(file as TFile)).split("\n");
+	if (!file || !(file instanceof TFile)) return [];
+	
+	let content = (await app.vault.cachedRead(file)).split("\n");
 
 	let trackers: Array<{ section: SectionInfo, tracker: Tracker }> = [];
 	let curr: { lineStart: number; text: string; lineEnd?: number } | undefined;
@@ -330,12 +332,7 @@ export function startNewEntry(tracker: Tracker, name: string): void {
 	tracker.entries.push(entry);
 }
 
-function endRunningEntry(tracker: Tracker): void {
-	let entry = getRunningEntry(tracker.entries);
-	if (entry) {
-		entry.endTime = moment().toISOString();
-	}
-}
+
 
 function endRunningEntryInSegment(entry: Entry): void {
 	if (entry.subEntries) {
@@ -419,37 +416,9 @@ export function orderedEntries(entries: Entry[], settings: TimeTrackerPlusSettin
 	return settings.reverseSegmentOrder ? entries.slice().reverse() : entries;
 }
 
-// Table Creation Functions
-function createMarkdownTable(tracker: Tracker, settings: TimeTrackerPlusSettings): string {
-	let table = [["Segment", "Start time", "End time", "Duration"]];
 
-	for (let entry of orderedEntries(tracker.entries, settings))
-		table.push(...createTableSection(entry, settings));
 
-	table.push(["**Total**", "", "", `**${formatDuration(getTotalDuration(tracker.entries), settings)}**`]);
 
-	let ret = "";
-	let widths = Array.from(Array(4).keys()).map((i) => Math.max(...table.map((a) => a[i].length)));
-
-	for (let r = 0; r < table.length; r++) {
-		if (r == 1)
-			ret += "| " + Array.from(Array(4).keys()).map((i) => "-".repeat(widths[i])).join(" | ") + " |\n";
-
-		let row: string[] = [];
-		for (let i = 0; i < 4; i++) row.push(table[r][i].padEnd(widths[i], " "));
-		ret += "| " + row.join(" | ") + " |\n";
-	}
-	return ret;
-}
-
-function createCsv(tracker: Tracker, settings: TimeTrackerPlusSettings): string {
-	let ret = "";
-	for (let entry of orderedEntries(tracker.entries, settings)) {
-		for (let row of createTableSection(entry, settings))
-			ret += row.join(settings.csvDelimiter) + "\n";
-	}
-	return ret;
-}
 
 function createTableSection(entry: Entry, settings: TimeTrackerPlusSettings, indent = 0): string[][] {
 	const prefix = `${"-".repeat(indent)} `;
@@ -469,38 +438,20 @@ function createTableSection(entry: Entry, settings: TimeTrackerPlusSettings, ind
 	return ret;
 }
 
-// UI Helper Functions
-function setCountdownValues(
-	tracker: Tracker,
-	current: HTMLElement,
-	total: HTMLElement,
-	totalToday: HTMLElement | undefined,
-	currentDiv: HTMLElement,
-	settings: TimeTrackerPlusSettings
-): void {
-	let running = getRunningEntry(tracker.entries);
-	if (running && !running.endTime) {
-		current.setText(formatDuration(getDuration(running), settings));
-		currentDiv.hidden = false;
-	} else {
-		currentDiv.hidden = true;
-	}
-	total.setText(formatDuration(getTotalDuration(tracker.entries), settings));
-	totalToday?.setText(formatDuration(getTotalDurationToday(tracker.entries), settings));
-}
+
 
 	// Editable Field Classes
 class EditableField {
 	cell: HTMLElement;
 	label: HTMLElement;
 	box: TextComponent;
-	onSave?: () => void;
+	onSave?: () => void | Promise<void>;
 	onCancel?: () => void;
 
 	constructor(row: HTMLElement, indent: number, value: string) {
 		this.cell = row.createEl("td");
 		this.label = this.cell.createEl("span", { text: value, cls: "time-tracker-plus-field-indent" });
-		this.label.setCssStyles({ "--time-tracker-plus-indent": `${indent}em` } as any);
+		this.label.setCssStyles({ "--time-tracker-plus-indent": `${indent}em` } as Record<string, string>);
 		this.box = new TextComponent(this.cell).setValue(value);
 		this.box.inputEl.addClass("time-tracker-plus-input");
 		this.box.inputEl.hide();

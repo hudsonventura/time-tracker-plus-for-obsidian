@@ -1,4 +1,4 @@
-import { Modal, App, Setting } from "obsidian";
+import { Modal, App, Setting, TextComponent } from "obsidian";
 
 export class ConfirmModal extends Modal {
 	private message: string;
@@ -60,7 +60,7 @@ export class TargetTimeModal extends Modal {
 		contentEl.createEl("h3", { text: "Set target time" });
 		contentEl.createEl("p", { text: "Enter target time (e.g., 2h, 30m, 1h30m, 2d5h):" });
 
-		let textInput: any;
+		let textInput: TextComponent;
 
 		new Setting(contentEl)
 			.setName("Target time")

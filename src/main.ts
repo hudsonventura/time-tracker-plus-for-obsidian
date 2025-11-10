@@ -116,7 +116,7 @@ export default class TimeTrackerPlusPlugin extends Plugin {
 		// Auto-stop timers at specified times
 		let lastCheckedMinute = -1;
 
-		const autoStopInterval = window.setInterval(async () => {
+		const autoStopInterval = window.setInterval(() => {
 			const now = moment();
 			const currentMinute = now.minutes();
 
@@ -127,24 +127,26 @@ export default class TimeTrackerPlusPlugin extends Plugin {
 			lastCheckedMinute = currentMinute;
 
 			if (shouldAutoStopNow(this.settings.autoStopTimes)) {
-				let stoppedCount = 0;
-				const files = this.app.vault.getMarkdownFiles();
+				(async () => {
+					let stoppedCount = 0;
+					const files = this.app.vault.getMarkdownFiles();
 
-				for (const file of files) {
-					try {
-						const content = await this.app.vault.read(file);
-						const wasStopped = await stopAllRunnersInFile(content, file.path, this.app);
-						if (wasStopped) {
-							stoppedCount++;
+					for (const file of files) {
+						try {
+							const content = await this.app.vault.read(file);
+							const wasStopped = await stopAllRunnersInFile(content, file.path, this.app);
+							if (wasStopped) {
+								stoppedCount++;
+							}
+						} catch (e) {
+							console.error("Error auto-stopping timers in file:", file.path, e);
 						}
-					} catch (e) {
-						console.error("Error auto-stopping timers in file:", file.path, e);
 					}
-				}
 
-				if (stoppedCount > 0) {
-					new Notice(`Auto-stopped timers in ${stoppedCount} file(s) at ${now.format("HH:mm")}`);
-				}
+					if (stoppedCount > 0) {
+						new Notice(`Auto-stopped timers in ${stoppedCount} file(s) at ${now.format("HH:mm")}`);
+					}
+				})();
 			}
 		}, 1000);
 
